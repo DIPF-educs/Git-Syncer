@@ -12,7 +12,8 @@ Note: __Requires python 3__
 | fork | The forked repository url |
 | namespace | a namespace (i.e. a folder) that is created in the fork (default: `source`) |
 
-All branches from the source are transferred to the fork and are stored in the folder given in `namespace`
+All branches and tags from the source are transferred to the fork and are stored in the folder given in `namespace`
+* branches/tags will be generated using a folder structure using the namespace
 
 ## Configuration / URLs
 To allow cloning and pushing to gitlab, a deploy key is required. For just cloning, a deploy token is sufficient.
