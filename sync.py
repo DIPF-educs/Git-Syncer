@@ -27,6 +27,7 @@ def git(*args):
 
 def mirror(source, fork, namespace):
     skipped = 0
+    curdir = os.getcwd()
     with tempfile.TemporaryDirectory() as tmpdir:
         os.chdir(tmpdir)
         print(f"Working in {os.getcwd()}")
@@ -38,7 +39,7 @@ def mirror(source, fork, namespace):
             git("remote", "add", "upstream", source)
             git('fetch', 'upstream')
             print("✓")
-            print("Copy branches", end="")
+            print("Copy branches ", end="")
             git("push", "-f", "origin", f"refs/remotes/upstream/*:refs/heads/{namespace}/*")
             print("✓")
             tags = git("tag", "-l").stdout.decode().split()
@@ -53,7 +54,7 @@ def mirror(source, fork, namespace):
                     #print(f"Skipping {t} as it is already present")
                     skipped += 1
                     continue
-                print(f"Pushing tag {t}", end="")
+                print(f"Pushing tag {t} ", end="")
                 git("push", "-f", "origin", f"refs/tags/{t}:refs/tags/{namespace}/{t}")
                 print("✓")
         except Exception as e:
@@ -62,27 +63,29 @@ def mirror(source, fork, namespace):
             print(e.stderr)
             print(e.args)
         finally:
+            os.chdir(curdir)
             print("Cleanup ", end="")
     print("✓")
     print(f"Skipped {skipped} tags")
 
 def set_id_rsa(path):
-    if(os.path.exists(os.path.join(os.path.abspath(path), "id_rsa"))):
-        env["GIT_SSH_COMMAND"] = f'ssh -i {path}/id_rsa -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+    if(os.path.exists(os.path.abspath(path))):
+        env["GIT_SSH_COMMAND"] = f'ssh -i {os.path.abspath(path)} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
 
 def main():
     global env
-    set_id_rsa(os.getcwd())
-    env["BASE_GIT_SSH_COMMAND"] = env["GIT_SSH_COMMAND"]
+    set_id_rsa(os.path.join(os.getcwd(),"id_rsa"))
+    env["BASE_GIT_SSH_COMMAND"] = env.get("GIT_SSH_COMMAND", "")
     skipped = 0
     if opts.file != None and os.path.exists(opts.file):
         import json
         with open(opts.file) as fp:
             repos = json.load(fp)
+        filePath = os.path.dirname(opts.file)
         for repo in repos:
             if "ssh_file" in repo:
-                print("Using own SSH Key", repo)
-                set_id_rsa(repo['ssh_file'])
+                print(f"Using own SSH Key {repo['ssh_file']}")
+                set_id_rsa(os.path.join(filePath, repo['ssh_file']))
             mirror(repo["source"], repo["fork"], repo["namespace"])
             #restore
             if "ssh_file" in repo:
