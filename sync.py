@@ -15,24 +15,28 @@ opts = args.parse_args()
 
 env = {}
 
+def print_start(msg):
+    print(msg, end=" ", flush=True)
+def print_done():
+    print("✓")
+
 def git(*args):
     global env, opts
     if opts.dry_run:
-        print(f"Would call 'git {' '.join(args)}'  ", end="")
+        print_start(f"Would call 'git {' '.join(args)}' ")
         res = type("Dummy", (object,), {})()
         res.stdout = b""
         return res
     return run(['git', *args], check=True, env=env, capture_output=True)
 
 def create_tags_from_upstream(namespace):
-    global env
+    #filter only the tags from upstream
     spec = git("ls-remote","-t","upstream").stdout.decode().strip().splitlines()
     spec = [x.split()[1][len("refs/tags/"):] for x in spec]
     refspecs = [f"refs/tags/{tagname}:refs/tags/{namespace}/{tagname}" for tagname in spec]
-    print(f"Pushing {len(refspecs)} tags ", end="")
-    #git("push","-f","origin",*refspecs)
-    run(["git","push","-f","origin", *refspecs], env=env, check=True, capture_output=True)
-    print("✓")
+    print_start(f"Pushing {len(refspecs)} tags")
+    git("push","-f","origin",*refspecs)
+    print_done()
 
 def mirror(source, fork, namespace):
     curdir = os.getcwd()
@@ -40,17 +44,16 @@ def mirror(source, fork, namespace):
         os.chdir(tmpdir)
         print(f"Working in {os.getcwd()}")
         try:
-            print("Cloning fork ", end="")
+            print_start("Cloning fork")
             git("clone", "--bare", fork, ".")
-            print("✓")
-            print("Fetching source ", end="")
+            print_done()
+            print_start("Fetching source")
             git("remote", "add", "upstream", source)
-            res = git('fetch', '--tags', 'upstream')
-            print(res.stderr)
-            print("✓")
-            print("Copy branches ", end="")
-            #git("push", "-f", "origin", f"refs/remotes/upstream/*:refs/heads/{namespace}/*")
-            print("✓")
+            git('fetch', '--tags', 'upstream')
+            print_done()
+            print_start("Copy branches ")
+            git("push", "-f", "origin", f"refs/remotes/upstream/*:refs/heads/{namespace}/*")
+            print_done()
             create_tags_from_upstream(namespace)
         except Exception as e:
             print("Failed to invoke command", e)
@@ -59,8 +62,8 @@ def mirror(source, fork, namespace):
             print(e.args)
         finally:
             os.chdir(curdir)
-            print("Cleanup ", end="")
-    print("✓")
+            print_start("Cleanup")
+    print_done()
 
 def set_id_rsa(path):
     if(os.path.exists(os.path.abspath(path))):
