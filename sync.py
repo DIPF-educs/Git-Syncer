@@ -22,11 +22,19 @@ def git(*args):
         res = type("Dummy", (object,), {})()
         res.stdout = b""
         return res
-    return run(['git'] + list(args), check=True, env=env, capture_output=True)
+    return run(['git', *args], check=True, env=env, capture_output=True)
 
+def create_tags_from_upstream(namespace):
+    global env
+    spec = git("ls-remote","-t","upstream").stdout.decode().strip().splitlines()
+    spec = [x.split()[1][len("refs/tags/"):] for x in spec]
+    refspecs = [f"refs/tags/{tagname}:refs/tags/{namespace}/{tagname}" for tagname in spec]
+    print(f"Pushing {len(refspecs)} tags ", end="")
+    #git("push","-f","origin",*refspecs)
+    run(["git","push","-f","origin", *refspecs], env=env, check=True, capture_output=True)
+    print("✓")
 
 def mirror(source, fork, namespace):
-    skipped = 0
     curdir = os.getcwd()
     with tempfile.TemporaryDirectory() as tmpdir:
         os.chdir(tmpdir)
@@ -37,26 +45,13 @@ def mirror(source, fork, namespace):
             print("✓")
             print("Fetching source ", end="")
             git("remote", "add", "upstream", source)
-            git('fetch', 'upstream')
+            res = git('fetch', '--tags', 'upstream')
+            print(res.stderr)
             print("✓")
             print("Copy branches ", end="")
-            git("push", "-f", "origin", f"refs/remotes/upstream/*:refs/heads/{namespace}/*")
+            #git("push", "-f", "origin", f"refs/remotes/upstream/*:refs/heads/{namespace}/*")
             print("✓")
-            tags = git("tag", "-l").stdout.decode().split()
-            for t in tags:
-                #avoid nesting (shouldnt happen)
-                #and additional pushing of tags if they are already present
-                if(t.startswith(namespace)):
-                    skipped += 1
-                    #print(f"Skipping already namespaced tag {t}")
-                    continue
-                if(f"{namespace}/{t}" in tags):
-                    #print(f"Skipping {t} as it is already present")
-                    skipped += 1
-                    continue
-                print(f"Pushing tag {t} ", end="")
-                git("push", "-f", "origin", f"refs/tags/{t}:refs/tags/{namespace}/{t}")
-                print("✓")
+            create_tags_from_upstream(namespace)
         except Exception as e:
             print("Failed to invoke command", e)
             print(e.stdout)
@@ -66,7 +61,6 @@ def mirror(source, fork, namespace):
             os.chdir(curdir)
             print("Cleanup ", end="")
     print("✓")
-    print(f"Skipped {skipped} tags")
 
 def set_id_rsa(path):
     if(os.path.exists(os.path.abspath(path))):
@@ -76,7 +70,6 @@ def main():
     global env
     set_id_rsa(os.path.join(os.getcwd(),"id_rsa"))
     env["BASE_GIT_SSH_COMMAND"] = env.get("GIT_SSH_COMMAND", "")
-    skipped = 0
     if opts.file != None and os.path.exists(opts.file):
         import json
         with open(opts.file) as fp:
