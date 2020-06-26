@@ -33,6 +33,8 @@ def create_tags_from_upstream(namespace):
     #filter only the tags from upstream
     spec = git("ls-remote","-t","upstream").stdout.decode().strip().splitlines()
     spec = [x.split()[1][len("refs/tags/"):] for x in spec]
+    #filter tags with references, i.e ^{}
+    spec = [x for x in spec if not "^{" in x]
     refspecs = [f"refs/tags/{tagname}:refs/tags/{namespace}/{tagname}" for tagname in spec]
     print_start(f"Pushing {len(refspecs)} tags")
     git("push","-f","origin",*refspecs)
