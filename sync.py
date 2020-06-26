@@ -36,6 +36,10 @@ def create_tags_from_upstream(namespace):
     #filter tags with references, i.e ^{}
     spec = [x for x in spec if not "^{" in x]
     refspecs = [f"refs/tags/{tagname}:refs/tags/{namespace}/{tagname}" for tagname in spec]
+    if(len(refspecs) == 0):
+        print_start("No tags found -> skipping")
+        print_done()
+        return
     print_start(f"Pushing {len(refspecs)} tags")
     git("push","-f","origin",*refspecs)
     print_done()
