@@ -7,6 +7,9 @@ Note: __Requires python 3__
 `python3 sync.py`
 
 `usage: sync.py [-h] source fork [namespace]`
+
+
+| parameter | description |
 | ---- | ---- |
 | source | The original git-url that was being forked from and was updated (should be synced) |
 | fork | The forked repository url |
