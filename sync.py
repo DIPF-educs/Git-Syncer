@@ -23,6 +23,7 @@ def print_done():
 def git(*args):
     global env, opts
     if opts.dry_run:
+        print_done()
         print_start(f"Would call 'git {' '.join(args)}' ")
         res = type("Dummy", (object,), {})()
         res.stdout = b""
@@ -81,14 +82,14 @@ def main():
     env["BASE_GIT_SSH_COMMAND"] = env.get("GIT_SSH_COMMAND", "")
     if opts.file != None and os.path.exists(opts.file):
         import json
-        with open(opts.file) as fp:
+        with open(opts.file, "r") as fp:
             repos = json.load(fp)
         filePath = os.path.dirname(opts.file)
         for repo in repos:
             if "ssh_file" in repo:
                 ssh_file = os.path.join(filePath, repo['ssh_file'])
-                print(f"Using own SSH Key {repo['ssh_file']} in ${ssh_file}")
-                os.chmod(ssh_file, 600)
+                print(f"Using own SSH Key {repo['ssh_file']} in {ssh_file}")
+                os.chmod(ssh_file, 0o600)
                 set_id_rsa(ssh_file)
             mirror(repo["source"], repo["fork"], repo["namespace"])
             #restore
