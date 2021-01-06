@@ -3,6 +3,9 @@ A small tool written in python3 that synchronizes a source and a fork git reposi
 
 Note: __Requires python 3__
 
+## Docker
+If using the docker build, the python script is being stored in `/bin/sync`
+
 ## Synopsis
 `python3 sync.py`
 
