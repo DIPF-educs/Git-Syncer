@@ -50,14 +50,14 @@ def mirror(source, fork, namespace):
         os.chdir(tmpdir)
         print(f"Working in {os.getcwd()}")
         try:
-            print_start("Cloning fork")
+            print_start(f"Cloning fork at ${fork}")
             git("clone", "--bare", fork, ".")
             print_done()
-            print_start("Fetching source")
+            print_start(f"Fetching source from {source}")
             git("remote", "add", "upstream", source)
             git('fetch', '--tags', 'upstream')
             print_done()
-            print_start("Copy branches ")
+            print_start(f"Copy branches into namespace {namespace}")
             git("push", "-f", "origin", f"refs/remotes/upstream/*:refs/heads/{namespace}/*")
             print_done()
             create_tags_from_upstream(namespace)
@@ -86,8 +86,10 @@ def main():
         filePath = os.path.dirname(opts.file)
         for repo in repos:
             if "ssh_file" in repo:
-                print(f"Using own SSH Key {repo['ssh_file']}")
-                set_id_rsa(os.path.join(filePath, repo['ssh_file']))
+                ssh_file = os.path.join(filePath, repo['ssh_file'])
+                print(f"Using own SSH Key {repo['ssh_file']} in ${ssh_file}")
+                os.chmod(ssh_file, 600)
+                set_id_rsa(ssh_file)
             mirror(repo["source"], repo["fork"], repo["namespace"])
             #restore
             if "ssh_file" in repo:
